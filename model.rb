@@ -1,5 +1,5 @@
 require 'bundler/setup'
-require 'typhoeus'
+require 'open-uri'
 require 'nokogiri'
 require 'redis'
 require 'logger'
@@ -32,13 +32,7 @@ module Crawler
   URI = "http://www.tesouro.fazenda.gov.br/tesouro-direto-precos-e-taxas-dos-titulos"
 
   def get_new_data(force: false)
-    response = Typhoeus.get URI
-    if response.success?
-      return extract_data_from(response.body, force)
-    else
-      Log.error("Error requesting #{URI}. [#{response.code}]\n#{response.body}")
-      return nil
-    end
+    return extract_data_from(open(URI), force)
   end
 
   def extract_data_from(html, force)
