@@ -93,6 +93,8 @@ module Crawler
   end
 
   def extract_price(price_str)
+    return nil if price_str == "-"
+
     price = price_str[2..-1].gsub(",", ".").to_f
     if price.zero?
       nil
