@@ -38,12 +38,13 @@ module Crawler
   def extract_data_from(html, force)
     last_updated_key = "tesouro-direto-monitor|crawler|last-updated"
     doc = Nokogiri::HTML(html)
+    return nil if has_public_titles_table? doc
     redis = RedisFactory.get
 
     last_updated = redis.get last_updated_key
     last_updated = (!last_updated || last_updated.empty?) ? nil : DateTime.parse(last_updated)
 
-    updated_date = extract_updated_date_from(doc)
+    updated_date = extract_updated_date_from doc
     updated_date = (updated_date.to_time + 1).to_datetime if force # add one second to make different value on redis
 
     if force || !last_updated || last_updated < updated_date
@@ -102,6 +103,10 @@ module Crawler
       price
     end
   end
+
+  def has_public_titles_table?(doc)
+    !doc.css("tr.camposTesouroDireto").empty?
+  end
 end
 
 module Persistence
@@ -119,6 +124,11 @@ module Persistence
       json = JSON.dump(public_title.keep_if(&is_persistent_attribute).merge(updated_date: updated_date))
       redis.zadd(key, updated_date.to_time.to_i, json)
       redis.zremrangebyscore(key, 0, (updated_date-35).to_time.to_i) # remove olds
+      if redis.zcard(key).zero?
+        redis.srem("tesouro-direto-monitor:public-titles", key)
+      else
+        redis.sadd("tesouro-direto-monitor:public-titles", key)
+      end
     end
   end
 
